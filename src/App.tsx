@@ -135,12 +135,27 @@ function App() {
         <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-md">
           <h1 className="text-3xl font-bold mb-6 text-center text-blue-600 dark:text-blue-400">{t.appName}</h1>
 
-          {/* MODE SWITCH */}
-          <div className="flex justify-center gap-4 mb-6 text-sm">
-            <button onClick={() => { setAuthMode('login'); setError(''); setSuccessMsg(''); }} className={`px-3 py-1 rounded ${authMode === 'login' ? 'bg-blue-100 text-blue-700 font-bold' : 'text-gray-500'}`}>{t.save}</button>
-            <button onClick={() => { setAuthMode('register'); setError(''); setSuccessMsg(''); }} className={`px-3 py-1 rounded ${authMode === 'register' ? 'bg-green-100 text-green-700 font-bold' : 'text-gray-500'}`}>{t.create}</button>
-            <button onClick={() => { setAuthMode('reset'); setError(''); setSuccessMsg(''); }} className={`px-3 py-1 rounded ${authMode === 'reset' ? 'bg-yellow-100 text-yellow-700 font-bold' : 'text-gray-500'}`}>{t.resetPassword}</button>
-          </div>
+          {/* MODE SWITCH - Tydelige overskrifter */}
+      <div className="flex justify-center gap-4 mb-6 text-sm">
+       <button 
+       onClick={() => { setAuthMode('login'); setError(''); setSuccessMsg(''); }} 
+       className={`px-3 py-1 rounded ${authMode === 'login' ? 'bg-blue-100 text-blue-700 font-bold' : 'text-gray-500'}`}
+       >
+        {t.btnLogin}
+        </button>
+      <button 
+      onClick={() => { setAuthMode('register'); setError(''); setSuccessMsg(''); }} 
+      className={`px-3 py-1 rounded ${authMode === 'register' ? 'bg-green-100 text-green-700 font-bold' : 'text-gray-500'}`}
+      >
+    {t.btnRegister}
+    </button>
+  <button 
+    onClick={() => { setAuthMode('reset'); setError(''); setSuccessMsg(''); }} 
+    className={`px-3 py-1 rounded ${authMode === 'reset' ? 'bg-yellow-100 text-yellow-700 font-bold' : 'text-gray-500'}`}
+    >
+    {t.btnResetPassword}
+      </button>
+   </div>
 
           {/* 1. LOGIN */}
           {authMode === 'login' && (
