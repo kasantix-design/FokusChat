@@ -1,0 +1,31 @@
+version: '3.8'
+services:
+  peergos:
+    image: peergos/peergos:latest
+    container_name: peergos-server
+    ports:
+      - "8080:8080"
+      - "4001:4001"
+    environment:
+      - PEERGOS_BLOCKSTORE=local
+      - JAVA_OPTS=-Xmx1g
+    volumes:
+      - peergos_data:/peergos/data
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: peergos-db
+    environment:
+      POSTGRES_DB: peergos
+      POSTGRES_USER: peergos
+      POSTGRES_PASSWORD: changeme_secure_password_123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  peergos_data:
+  postgres_data:
