@@ -78,7 +78,10 @@ export const nb = {
   devices: 'Enheter',
   logout: 'Logg ut',
   logoutConfirm: 'Er du sikker på at du vil logge ut?',
-
+    // Knapper på innloggingssiden
+  btnLogin: 'Logg inn',
+  btnRegister: 'Opprett konto',
+  btnResetPassword: 'Tilbakestill passord',
   // Feilmeldinger
   loginError: 'Feil brukernavn eller passord',
   networkError: 'Nettverksfeil. Sjekk forbindelsen.',
