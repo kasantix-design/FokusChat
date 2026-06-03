@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { peergosService } from './services/peergos-client';
 import { BottomNav } from './components/BottomNav';
 import { ThemePicker } from './components/ThemePicker';
+import { ChatView } from './components/ChatView';
 import { nb } from './i18n/nb';
 import { en } from './i18n/en';
 
@@ -21,10 +22,13 @@ function App() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
-  const [inviteCodeInput, setInviteCodeInput] = useState(''); // Input for registrering
-  const [generatedCode, setGeneratedCode] = useState<string | null>(null); // Kode generert av admin
+  const [inviteCodeInput, setInviteCodeInput] = useState('');
+  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  
+  // 🔧 NYTT: Lagrer innlogget bruker for Admin-sjekk
+  const [currentUser, setCurrentUser] = useState('');
 
   const t = language === 'nb' ? nb : en;
 
@@ -49,17 +53,11 @@ function App() {
     setError('');
     setSuccessMsg('');
     try {
-      // Simulerer innlogging (i produksjon: peergosService.login)
-      // La oss la 'admin' være en spesialbruker for testing
-      if (username.toLowerCase() === 'admin') {
-        setIsLoggedIn(true);
-        setUsername('');
-        setPassword('');
-        return;
-      }
+      // 🔧 FIX: Lagre brukernavn FØR vi tømmer feltet
+      const loggedInUser = username;
+      setCurrentUser(loggedInUser);
       
-      // For andre brukere, sjekk om de eksisterer (her simulerer vi suksess for alle)
-      // I ekte app: await peergosService.login(...)
+      // Simulerer innlogging (i produksjon: peergosService.login)
       setIsLoggedIn(true);
       setUsername('');
       setPassword('');
@@ -84,9 +82,6 @@ function App() {
       // Simulerer registrering
       console.log('Registrerer:', username, email, inviteCodeInput);
       setSuccessMsg('Bruker opprettet! Du kan nå logge inn.');
-      
-      // Fjern koden fra listen (hvis den skal være engangsbruk)
-      // setValidInviteCodes(prev => prev.filter(code => code !== inviteCodeInput));
       
       setAuthMode('login');
       setUsername('');
@@ -128,6 +123,7 @@ function App() {
     if (confirm(t.logoutConfirm)) {
       setIsLoggedIn(false);
       setAuthMode('login');
+      setCurrentUser(''); // 🔧 FIX: Nullstill også currentUser
       setGeneratedCode(null);
     }
   };
@@ -190,7 +186,8 @@ function App() {
   }
 
   // --- INNLOGGET VISNING ---
-  const isAdmin = username.toLowerCase() === 'admin';
+  // 🔧 FIX: Bruk currentUser i stedet for username
+  const isAdmin = currentUser.toLowerCase() === 'admin';
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-16">
@@ -212,7 +209,8 @@ function App() {
           <div className="space-y-6">
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
               <h2 className="text-2xl font-bold mb-4">{t.profileTitle}</h2>
-              <p className="text-gray-600 dark:text-gray-300 mb-4">{t.username}: <strong>{username}</strong></p>
+              {/* 🔧 FIX: Vis currentUser i stedet for username */}
+              <p className="text-gray-600 dark:text-gray-300 mb-4">{t.username}: <strong>{currentUser}</strong></p>
               
               {/* ADMIN PANEL */}
               {isAdmin && (
@@ -247,10 +245,37 @@ function App() {
           </div>
         )}
 
-        {/* Andre faner (Chat, Kalender, Split) - uendret */}
-        {activeTab === 'chat' && <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow text-center"><h2 className="text-2xl font-bold mb-4">{t.chatTitle}</h2><p className="text-gray-500">{t.noChats}</p><button className="mt-4 bg-blue-600 text-white px-4 py-2 rounded">{t.startChat}</button></div>}
-        {activeTab === 'calendar' && <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow text-center"><h2 className="text-2xl font-bold mb-4">{t.calendarTitle}</h2><div className="space-y-2"><div className="p-3 bg-blue-100 dark:bg-blue-900 rounded">{t.bulandet}</div><div className="p-3 bg-green-100 dark:bg-green-900 rounded">{t.hovet}</div><div className="p-3 bg-purple-100 dark:bg-purple-900 rounded">{t.hop}</div></div><button className="mt-4 bg-blue-600 text-white px-4 py-2 rounded">{t.createCalendar}</button></div>}
-        {activeTab === 'split' && <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow"><h3 className="font-bold mb-2">{t.chatTitle}</h3><p className="text-sm text-gray-500">{t.noChats}</p></div><div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow"><h3 className="font-bold mb-2">{t.calendarTitle}</h3><p className="text-sm text-gray-500">{t.busy}</p></div></div>}
+        {/* 🔧 FIX: Koble til ChatView-komponenten */}
+        {activeTab === 'chat' && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden" style={{ height: 'calc(100vh - 140px)' }}>
+            <ChatView currentUser={currentUser} />
+          </div>
+        )}
+        
+        {activeTab === 'calendar' && (
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow text-center">
+            <h2 className="text-2xl font-bold mb-4">{t.calendarTitle}</h2>
+            <div className="space-y-2">
+              <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded">{t.bulandet}</div>
+              <div className="p-3 bg-green-100 dark:bg-green-900 rounded">{t.hovet}</div>
+              <div className="p-3 bg-purple-100 dark:bg-purple-900 rounded">{t.hop}</div>
+            </div>
+            <button className="mt-4 bg-blue-600 text-white px-4 py-2 rounded">{t.createCalendar}</button>
+          </div>
+        )}
+        
+        {activeTab === 'split' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+              <h3 className="font-bold mb-2">{t.chatTitle}</h3>
+              <p className="text-sm text-gray-500">{t.noChats}</p>
+            </div>
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+              <h3 className="font-bold mb-2">{t.calendarTitle}</h3>
+              <p className="text-sm text-gray-500">{t.busy}</p>
+            </div>
+          </div>
+        )}
       </main>
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
     </div>
