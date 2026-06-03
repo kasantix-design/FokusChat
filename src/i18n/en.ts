@@ -73,7 +73,14 @@ export const en = {
   devices: 'Devices',
   logout: 'Logout',
   logoutConfirm: 'Are you sure you want to logout?',
+  // ... (tidligere innhold)
 
+  // Buttons on login screen
+  btnLogin: 'Log in',
+  btnRegister: 'Create account',
+  btnResetPassword: 'Reset password',
+
+  // ... (resten av filen)
   loginError: 'Incorrect username or password',
   networkError: 'Network error. Check your connection.',
   permissionDenied: 'You do not have access to this resource.',
