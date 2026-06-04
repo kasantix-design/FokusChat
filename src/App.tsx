@@ -37,16 +37,24 @@ function App() {
   // Mock database for invitasjonskoder (i produksjon: Peergos API)
   const [validInviteCodes, setValidInviteCodes] = useState<string[]>(['FOKUS-DEV']);
 
-  // Effekter for tema
+    // 🔧 KORRIGERT: Oppdater tema på hele siden
   useEffect(() => {
     const root = document.documentElement;
+    
+    // 1. Fjern alle tema-klasser først
     root.classList.remove('light', 'dark', 'pink');
-    if (theme === 'dark') root.classList.add('dark');
-    else if (theme === 'pink') {
+    root.style.removeProperty('--primary-color');
+
+    // 2. Legg til riktig klasse basert på state
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else if (theme === 'pink') {
       root.classList.add('pink');
       root.style.setProperty('--primary-color', '#ec4899');
+    } else {
+      // Default er 'light'
+      root.classList.add('light');
     }
-    root.classList.add('light');
   }, [theme]);
 
   // --- 🔧 ALLE FUNKSJONER MÅ VÆRE FØR RETURN-STATERMENT ---
