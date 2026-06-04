@@ -236,7 +236,20 @@ function App() {
   }
 
   // --- INNLOGGET VISNING ---
-  return (
+  
+  
+    return (
+    <CalendarProvider>
+      <div className="min-h-screen pb-16">
+        {/* Header og andre komponenter vil arve fargene fra body via CSS variabler */}
+        <header className="bg-white dark:bg-gray-800 ...">
+           {/* ... */}
+        </header>
+        {/* ... */}
+      </div>
+    </CalendarProvider>
+
+  );return (
     <CalendarProvider>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-16">
         <header className="bg-white dark:bg-gray-800 shadow-sm p-4 sticky top-0 z-40">
