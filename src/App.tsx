@@ -6,6 +6,7 @@ import { ChatView } from './components/ChatView';
 import { nb } from './i18n/nb';
 import { en } from './i18n/en';
 import { CalendarView } from './components/CalendarView';
+import { CalendarProvider } from './context/CalendarContext';
 
 type Tab = 'profile' | 'chat' | 'calendar' | 'split';
 type Theme = 'light' | 'dark' | 'pink' | 'custom';
@@ -93,6 +94,40 @@ function App() {
       setError(err.message || 'Kunne ikke opprette bruker.');
     }
   };
+      // --- INNLOGGET VISNING ---
+  const isAdmin = currentUser.toLowerCase() === 'admin';
+
+  return (
+    <CalendarProvider> {/* <-- Legg til her */}
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-16">
+        <header className="bg-white dark:bg-gray-800 shadow-sm p-4 sticky top-0 z-40">
+           {/* ... header ... */}
+        </header>
+
+        <main className="p-4">
+          {activeTab === 'profile' && (
+             {/* ... profil ... */}
+          )}
+
+          {activeTab === 'chat' && (
+             {/* ... chat ... */}
+          )}
+
+          {activeTab === 'calendar' && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden" style={{ height: 'calc(100vh - 140px)' }}>
+              <CalendarView currentUser={currentUser} isAdmin={isAdmin} />
+            </div>
+          )}
+
+          {activeTab === 'split' && (
+             {/* ... split ... */}
+          )}
+        </main>
+        <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+      </div>
+    </CalendarProvider>
+  );
+}
 
   // --- LOGIKK FOR GLEMT PASSORD ---
   const handleResetPassword = async (e: React.FormEvent) => {
