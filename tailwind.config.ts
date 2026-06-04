@@ -1,14 +1,13 @@
-/** @type {import('tailwindcss').Config} */
 export default {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
-  darkMode: 'class', // 🔧 VIKTIG: Bruk 'class' for å styre mørk modus manuelt
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        // Her kan du legge til egne farger hvis du vil
+        // Sikrer at rosa er tilgjengelig
         pink: {
           50: '#fdf2f8',
           100: '#fce7f3',
