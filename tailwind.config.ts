@@ -4,8 +4,25 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  darkMode: 'class', // 🔧 VIKTIG: Bruk 'class' for å styre mørk modus manuelt
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        // Her kan du legge til egne farger hvis du vil
+        pink: {
+          50: '#fdf2f8',
+          100: '#fce7f3',
+          200: '#fbcfe8',
+          300: '#f9a8d4',
+          400: '#f472b6',
+          500: '#ec4899',
+          600: '#db2777',
+          700: '#be185d',
+          800: '#9d174d',
+          900: '#831843',
+        }
+      }
+    },
   },
   plugins: [],
 }
