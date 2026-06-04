@@ -12,27 +12,25 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, isAdmin
   const { events, addEvent, updateEvent, deleteEvent, getFilteredEvents } = useCalendar();
   
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedView, setSelectedView] = useState<ViewType>('all'); // Default: Samle Kalender
+  const [selectedView, setSelectedView] = useState<ViewType>('all');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showModal, setShowModal] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<any>(null); // Bruk any for enkelhet her, eller Event type
+  const [editingEvent, setEditingEvent] = useState<any>(null);
 
-  // Hent filtrerte hendelser basert på valgt visning
   const displayedEvents = useMemo(() => {
     return getFilteredEvents(currentUser, selectedView);
   }, [events, currentUser, selectedView, getFilteredEvents]);
 
-  // Kalender-farger
+  // 🔧 KORRIGERT FARGER (med label for hver)
   const calendarColors = {
+    all: { bg: 'bg-indigo-100 dark:bg-indigo-900', border: 'border-indigo-300', text: 'text-indigo-900 dark:text-indigo-100', label: 'Samle Kalender' },
     private: { bg: 'bg-gray-100 dark:bg-gray-700', border: 'border-gray-300', text: 'text-gray-800 dark:text-gray-200', label: 'Privat' },
     bulandet: { bg: 'bg-blue-100 dark:bg-blue-900', border: 'border-blue-300', text: 'text-blue-900 dark:text-blue-100', label: 'BULANDET' },
     hovet: { bg: 'bg-green-100 dark:bg-green-900', border: 'border-green-300', text: 'text-green-900 dark:text-green-100', label: 'HOVET' },
     hop: { bg: 'bg-purple-100 dark:bg-purple-900', border: 'border-purple-300', text: 'text-purple-900 dark:text-purple-100', label: 'HOP' },
     custom: { bg: 'bg-yellow-100 dark:bg-yellow-900', border: 'border-yellow-300', text: 'text-yellow-900 dark:text-yellow-100', label: 'Egen' },
-    all: { bg: 'bg-indigo-100 dark:bg-indigo-900', border: 'border-indigo-300', text: 'text-indigo-900 dark:text-indigo-100', label: 'Samle Kalender' },
   };
 
-  // Generer dager i måneden
   const daysInMonth = useMemo(() => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -46,11 +44,14 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, isAdmin
     return days;
   }, [currentDate]);
 
-  // Hent hendelser for en gitt dato (kun fra displayedEvents)
+  // 🔧 KORRIGERT: Sjekk om dato faller INNENFOR hendelsesperiode (flere dager)
   const getEventsForDate = (date: Date) => {
+    const dateStr = date.toDateString();
     return displayedEvents.filter(event => {
-      const eventDate = new Date(event.startDate);
-      return eventDate.toDateString() === date.toDateString();
+      const start = new Date(event.startDate);
+      const end = new Date(event.endDate);
+      // Sjekk om dato er mellom start og end (inklusive)
+      return date >= start && date <= end;
     });
   };
 
@@ -100,7 +101,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, isAdmin
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header med Kalender-valg */}
       <div className="p-4 bg-white dark:bg-gray-800 border-b dark:border-gray-700 flex flex-col gap-3">
         <div className="flex justify-between items-center">
           <div>
@@ -115,9 +115,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, isAdmin
           </div>
         </div>
 
-        {/* Kalender-valgmeny */}
+        {/* 🔧 KORRIGERT: Kalender-valgmeny med riktige farger */}
         <div className="flex flex-wrap gap-2">
-          {(Object.keys(calendarColors) as ViewType[]).map((key) => (
+          {(['all', 'private', 'bulandet', 'hovet', 'hop', 'custom'] as ViewType[]).map((key) => (
             <button
               key={key}
               onClick={() => setSelectedView(key)}
@@ -133,7 +133,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, isAdmin
         </div>
       </div>
 
-      {/* Kalender-grid */}
       <div className="flex-1 overflow-y-auto p-4">
         <div className="grid grid-cols-7 gap-1 mb-2 text-center text-sm font-semibold text-gray-500">
           <div>Mån</div><div>Tirs</div><div>Ons</div><div>Tors</div><div>Fre</div><div>Lør</div><div>Søn</div>
@@ -176,7 +175,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, isAdmin
         </div>
       </div>
 
-      {/* Modal */}
       {showModal && (
         <EventModal
           event={editingEvent}
@@ -191,7 +189,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, isAdmin
   );
 };
 
-// --- EventModal (samme som før, men med type any for enkelhet) ---
+// EventModal (samme som før)
 interface EventModalProps {
   event: any;
   onClose: () => void;
