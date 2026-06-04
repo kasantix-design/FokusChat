@@ -12,6 +12,11 @@ export const nb = {
   back: 'Tilbake',
   next: 'Neste',
   prev: 'Forrige',
+  btnLogin: 'Logg inn',
+  btnRegister: 'Opprett konto',
+  btnResetPassword: 'Tilbakestill passord',
+  
+  // ... (resten av oversettelsene)
 
   // Navigasjon
   navProfile: 'Profil',
