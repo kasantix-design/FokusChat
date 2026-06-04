@@ -3,10 +3,10 @@ import { peergosService } from './services/peergos-client';
 import { BottomNav } from './components/BottomNav';
 import { ThemePicker } from './components/ThemePicker';
 import { ChatView } from './components/ChatView';
-import { nb } from './i18n/nb';
-import { en } from './i18n/en';
 import { CalendarView } from './components/CalendarView';
 import { CalendarProvider } from './context/CalendarContext';
+import { nb } from './i18n/nb';
+import { en } from './i18n/en';
 
 type Tab = 'profile' | 'chat' | 'calendar' | 'split';
 type Theme = 'light' | 'dark' | 'pink' | 'custom';
@@ -29,7 +29,7 @@ function App() {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   
-  // 🔧 NYTT: Lagrer innlogget bruker for Admin-sjekk
+  // 🔧 Lagrer innlogget bruker for Admin-sjekk
   const [currentUser, setCurrentUser] = useState('');
 
   const t = language === 'nb' ? nb : en;
@@ -49,6 +49,8 @@ function App() {
     root.classList.add('light');
   }, [theme]);
 
+  // --- 🔧 ALLE FUNKSJONER MÅ VÆRE FØR RETURN-STATERMENT ---
+  
   // --- LOGIKK FOR INNLØGNING ---
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,40 +96,6 @@ function App() {
       setError(err.message || 'Kunne ikke opprette bruker.');
     }
   };
-      // --- INNLOGGET VISNING ---
-  const isAdmin = currentUser.toLowerCase() === 'admin';
-
-  return (
-    <CalendarProvider> {/* <-- Legg til her */}
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-16">
-        <header className="bg-white dark:bg-gray-800 shadow-sm p-4 sticky top-0 z-40">
-           {/* ... header ... */}
-        </header>
-
-        <main className="p-4">
-          {activeTab === 'profile' && (
-             {/* ... profil ... */}
-          )}
-
-          {activeTab === 'chat' && (
-             {/* ... chat ... */}
-          )}
-
-          {activeTab === 'calendar' && (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden" style={{ height: 'calc(100vh - 140px)' }}>
-              <CalendarView currentUser={currentUser} isAdmin={isAdmin} />
-            </div>
-          )}
-
-          {activeTab === 'split' && (
-             {/* ... split ... */}
-          )}
-        </main>
-        <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
-      </div>
-    </CalendarProvider>
-  );
-}
 
   // --- LOGIKK FOR GLEMT PASSORD ---
   const handleResetPassword = async (e: React.FormEvent) => {
@@ -164,6 +132,9 @@ function App() {
     }
   };
 
+  // --- ADMIN-SJEKK (kun én gang!) ---
+  const isAdmin = currentUser.toLowerCase() === 'admin';
+
   // --- RENDERING ---
   if (!isLoggedIn) {
     return (
@@ -172,63 +143,86 @@ function App() {
           <h1 className="text-3xl font-bold mb-6 text-center text-blue-600 dark:text-blue-400">{t.appName}</h1>
 
           {/* MODE SWITCH - Tydelige overskrifter */}
-      <div className="flex justify-center gap-4 mb-6 text-sm">
-       <button 
-       onClick={() => { setAuthMode('login'); setError(''); setSuccessMsg(''); }} 
-       className={`px-3 py-1 rounded ${authMode === 'login' ? 'bg-blue-100 text-blue-700 font-bold' : 'text-gray-500'}`}
-       >
-        {t.btnLogin}
-        </button>
-      <button 
-      onClick={() => { setAuthMode('register'); setError(''); setSuccessMsg(''); }} 
-      className={`px-3 py-1 rounded ${authMode === 'register' ? 'bg-green-100 text-green-700 font-bold' : 'text-gray-500'}`}
-      >
-    {t.btnRegister}
-    </button>
-  <button 
-    onClick={() => { setAuthMode('reset'); setError(''); setSuccessMsg(''); }} 
-    className={`px-3 py-1 rounded ${authMode === 'reset' ? 'bg-yellow-100 text-yellow-700 font-bold' : 'text-gray-500'}`}
-    >
-    {t.btnResetPassword}
-      </button>
-   </div>
+          <div className="flex justify-center gap-4 mb-6 text-sm">
+            <button 
+              onClick={() => { setAuthMode('login'); setError(''); setSuccessMsg(''); }} 
+              className={`px-3 py-1 rounded ${authMode === 'login' ? 'bg-blue-100 text-blue-700 font-bold' : 'text-gray-500'}`}
+            >
+              {t.btnLogin}
+            </button>
+            <button 
+              onClick={() => { setAuthMode('register'); setError(''); setSuccessMsg(''); }} 
+              className={`px-3 py-1 rounded ${authMode === 'register' ? 'bg-green-100 text-green-700 font-bold' : 'text-gray-500'}`}
+            >
+              {t.btnRegister}
+            </button>
+            <button 
+              onClick={() => { setAuthMode('reset'); setError(''); setSuccessMsg(''); }} 
+              className={`px-3 py-1 rounded ${authMode === 'reset' ? 'bg-yellow-100 text-yellow-700 font-bold' : 'text-gray-500'}`}
+            >
+              {t.btnResetPassword}
+            </button>
+          </div>
 
           {/* 1. LOGIN */}
           {authMode === 'login' && (
             <form onSubmit={handleLogin} className="space-y-4">
-              <div><label className="block text-sm font-medium mb-1">{t.username}</label><input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required /></div>
-              <div><label className="block text-sm font-medium mb-1">{t.password}</label><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required /></div>
+              <h3 className="text-xl font-bold text-center">{t.btnLogin}</h3>
+              <div>
+                <label className="block text-sm font-medium mb-1">{t.username}</label>
+                <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">{t.password}</label>
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required />
+              </div>
               {error && <div className="text-red-500 text-sm bg-red-100 p-2 rounded">{error}</div>}
               {successMsg && <div className="text-green-600 text-sm bg-green-100 p-2 rounded">{successMsg}</div>}
-              <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">{t.save}</button>
+              <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">{t.btnLogin}</button>
             </form>
           )}
 
           {/* 2. REGISTER */}
           {authMode === 'register' && (
             <form onSubmit={handleRegister} className="space-y-4">
-              <div><label className="block text-sm font-medium mb-1">{t.username}</label><input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required /></div>
-              <div><label className="block text-sm font-medium mb-1">{t.email}</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required /></div>
+              <h3 className="text-xl font-bold text-center">{t.btnRegister}</h3>
+              <div>
+                <label className="block text-sm font-medium mb-1">{t.username}</label>
+                <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">{t.email}</label>
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required />
+              </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Invitasjonskode</label>
                 <input type="text" value={inviteCodeInput} onChange={(e) => setInviteCodeInput(e.target.value)} className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" placeholder="F.eks. INV-8X9Z" required />
                 <p className="text-xs text-gray-500 mt-1">Bruk koden du fikk fra en admin eller venn.</p>
               </div>
-              <div><label className="block text-sm font-medium mb-1">{t.password}</label><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required /></div>
+              <div>
+                <label className="block text-sm font-medium mb-1">{t.password}</label>
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required />
+              </div>
               {error && <div className="text-red-500 text-sm bg-red-100 p-2 rounded">{error}</div>}
               {successMsg && <div className="text-green-600 text-sm bg-green-100 p-2 rounded">{successMsg}</div>}
-              <button type="submit" className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg">{t.create}</button>
+              <button type="submit" className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg">{t.btnRegister}</button>
             </form>
           )}
 
           {/* 3. RESET */}
           {authMode === 'reset' && (
             <form onSubmit={handleResetPassword} className="space-y-4">
-              <div><label className="block text-sm font-medium mb-1">{t.email}</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" placeholder="din@email.no" required /></div>
-              <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg text-sm text-yellow-800"><strong>⚠️ Advarsel:</strong> Chat-meldinger vil gå tapt. Kalenderen gjenopprettes.</div>
+              <h3 className="text-xl font-bold text-center">{t.btnResetPassword}</h3>
+              <div>
+                <label className="block text-sm font-medium mb-1">{t.email}</label>
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" placeholder="din@email.no" required />
+              </div>
+              <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg text-sm text-yellow-800">
+                <strong>⚠️ Advarsel:</strong> Chat-meldinger vil gå tapt. Kalenderen gjenopprettes.
+              </div>
               {error && <div className="text-red-500 text-sm bg-red-100 p-2 rounded">{error}</div>}
               {successMsg && <div className="text-green-600 text-sm bg-green-100 p-2 rounded">{successMsg}</div>}
-              <button type="submit" className="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-lg">{t.resetPassword}</button>
+              <button type="submit" className="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-lg">{t.btnResetPassword}</button>
             </form>
           )}
         </div>
@@ -237,93 +231,94 @@ function App() {
   }
 
   // --- INNLOGGET VISNING ---
-  // 🔧 FIX: Bruk currentUser i stedet for username
-  const isAdmin = currentUser.toLowerCase() === 'admin';
-
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-16">
-      <header className="bg-white dark:bg-gray-800 shadow-sm p-4 sticky top-0 z-40">
-        <div className="flex justify-between items-center">
-          <h1 className="text-xl font-bold text-blue-600 dark:text-blue-400">{t.appName}</h1>
-          <div className="flex items-center gap-2">
-            <select value={language} onChange={(e) => setLanguage(e.target.value as Language)} className="text-sm border rounded p-1 dark:bg-gray-700 dark:text-white">
-              <option value="nb">🇳🇴 Norsk</option>
-              <option value="en">🇬🇧 English</option>
-            </select>
-            <button onClick={handleLogout} className="text-sm text-red-500 hover:text-red-700">{t.logout}</button>
+    <CalendarProvider>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-16">
+        <header className="bg-white dark:bg-gray-800 shadow-sm p-4 sticky top-0 z-40">
+          <div className="flex justify-between items-center">
+            <h1 className="text-xl font-bold text-blue-600 dark:text-blue-400">{t.appName}</h1>
+            <div className="flex items-center gap-2">
+              <select 
+                value={language} 
+                onChange={(e) => setLanguage(e.target.value as Language)} 
+                className="text-sm border rounded p-1 dark:bg-gray-700 dark:text-white"
+              >
+                <option value="nb">🇳🇴 Norsk</option>
+                <option value="en">🇬🇧 English</option>
+              </select>
+              <button onClick={handleLogout} className="text-sm text-red-500 hover:text-red-700">{t.logout}</button>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <main className="p-4">
-        {activeTab === 'profile' && (
-          <div className="space-y-6">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-              <h2 className="text-2xl font-bold mb-4">{t.profileTitle}</h2>
-              {/* 🔧 FIX: Vis currentUser i stedet for username */}
-              <p className="text-gray-600 dark:text-gray-300 mb-4">{t.username}: <strong>{currentUser}</strong></p>
-              
-              {/* ADMIN PANEL */}
-              {isAdmin && (
-                <div className="bg-blue-50 dark:bg-blue-900 p-4 rounded-lg mb-6 border border-blue-200">
-                  <h3 className="font-bold text-blue-800 dark:text-blue-200 mb-2">👑 Admin Panel</h3>
-                  <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">Generer nye invitasjonskoder for å invitere brukere.</p>
-                  
-                  <button onClick={generateInviteCode} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold mb-3">
-                    Generer Ny Kode
-                  </button>
+        <main className="p-4">
+          {activeTab === 'profile' && (
+            <div className="space-y-6">
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+                <h2 className="text-2xl font-bold mb-4">{t.profileTitle}</h2>
+                <p className="text-gray-600 dark:text-gray-300 mb-4">{t.username}: <strong>{currentUser}</strong></p>
+                
+                {/* ADMIN PANEL */}
+                {isAdmin && (
+                  <div className="bg-blue-50 dark:bg-blue-900 p-4 rounded-lg mb-6 border border-blue-200">
+                    <h3 className="font-bold text-blue-800 dark:text-blue-200 mb-2">👑 Admin Panel</h3>
+                    <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">Generer nye invitasjonskoder for å invitere brukere.</p>
+                    
+                    <button onClick={generateInviteCode} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold mb-3">
+                      Generer Ny Kode
+                    </button>
 
-                  {generatedCode && (
-                    <div className="bg-white dark:bg-gray-800 p-3 rounded border border-blue-300">
-                      <p className="text-xs text-gray-500">Din nye kode:</p>
-                      <p className="text-xl font-mono font-bold text-blue-600 select-all">{generatedCode}</p>
-                      <p className="text-xs text-gray-500 mt-1">Klikk på koden for å kopiere.</p>
-                    </div>
-                  )}
-                </div>
-              )}
+                    {generatedCode && (
+                      <div className="bg-white dark:bg-gray-800 p-3 rounded border border-blue-300">
+                        <p className="text-xs text-gray-500">Din nye kode:</p>
+                        <p className="text-xl font-mono font-bold text-blue-600 select-all">{generatedCode}</p>
+                        <p className="text-xs text-gray-500 mt-1">Klikk på koden for å kopiere.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
 
-              <ThemePicker currentTheme={theme} onThemeChange={setTheme} />
-              <div className="mt-4">
-                <h3 className="text-lg font-semibold mb-2">{t.notifications}</h3>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm">{t.notificationsOn}</span>
-                  <input type="checkbox" defaultChecked className="w-5 h-5" />
-                  <span className="text-sm">{t.notificationsOff}</span>
+                <ThemePicker currentTheme={theme} onThemeChange={setTheme} />
+                <div className="mt-4">
+                  <h3 className="text-lg font-semibold mb-2">{t.notifications}</h3>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">{t.notificationsOn}</span>
+                    <input type="checkbox" defaultChecked className="w-5 h-5" />
+                    <span className="text-sm">{t.notificationsOff}</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* 🔧 FIX: Koble til ChatView-komponenten */}
-        {activeTab === 'chat' && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden" style={{ height: 'calc(100vh - 140px)' }}>
-            <ChatView currentUser={currentUser} />
-          </div>
-        )}
-        
-       {activeTab === 'calendar' && (
-  <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden" style={{ height: 'calc(100vh - 140px)' }}>
-    <CalendarView currentUser={currentUser} isAdmin={isAdmin} />
-  </div>
-)}
-        
-        {activeTab === 'split' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-              <h3 className="font-bold mb-2">{t.chatTitle}</h3>
-              <p className="text-sm text-gray-500">{t.noChats}</p>
+          {activeTab === 'chat' && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden" style={{ height: 'calc(100vh - 140px)' }}>
+              <ChatView currentUser={currentUser} />
             </div>
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-              <h3 className="font-bold mb-2">{t.calendarTitle}</h3>
-              <p className="text-sm text-gray-500">{t.busy}</p>
+          )}
+          
+          {activeTab === 'calendar' && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden" style={{ height: 'calc(100vh - 140px)' }}>
+              <CalendarView currentUser={currentUser} isAdmin={isAdmin} />
             </div>
-          </div>
-        )}
-      </main>
-      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
-    </div>
+          )}
+          
+          {activeTab === 'split' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+                <h3 className="font-bold mb-2">{t.chatTitle}</h3>
+                <p className="text-sm text-gray-500">{t.noChats}</p>
+              </div>
+              <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+                <h3 className="font-bold mb-2">{t.calendarTitle}</h3>
+                <p className="text-sm text-gray-500">{t.busy}</p>
+              </div>
+            </div>
+          )}
+        </main>
+        <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+      </div>
+    </CalendarProvider>
   );
 }
 
