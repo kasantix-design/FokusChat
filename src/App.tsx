@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+to import React, { useState, useEffect } from 'react';
 import { peergosService } from './services/peergos-client';
 import { BottomNav } from './components/BottomNav';
 import { ThemePicker } from './components/ThemePicker';
@@ -35,24 +35,21 @@ function App() {
   const t = language === 'nb' ? nb : en;
 
   // Mock database for invitasjonskoder (i produksjon: Peergos API)
-  const [validInviteCodes, setValidInviteCodes] = useState<string[]>(['FOKUS-DEV']);
-
-    // 🔧 KORRIGERT: Oppdater tema på hele siden
+  const [validInviteCodes, setValidInviteCodes] = useState<string[]>(['
+      // 🔧 KORRIGERT TEMA-EFFEKT
   useEffect(() => {
     const root = document.documentElement;
     
-    // 1. Fjern alle tema-klasser først
+    // 1. Fjern ALLE tema-klasser først
     root.classList.remove('light', 'dark', 'pink');
-    root.style.removeProperty('--primary-color');
-
-    // 2. Legg til riktig klasse basert på state
+    
+    // 2. Sett inn riktig klasse basert på state
     if (theme === 'dark') {
       root.classList.add('dark');
     } else if (theme === 'pink') {
       root.classList.add('pink');
-      root.style.setProperty('--primary-color', '#ec4899');
     } else {
-      // Default er 'light'
+      // Default er 'light' (hvis ikke dark eller pink)
       root.classList.add('light');
     }
   }, [theme]);
