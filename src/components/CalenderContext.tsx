@@ -27,9 +27,7 @@ interface CalendarContextType {
 const CalendarContext = createContext<CalendarContextType | undefined>(undefined);
 
 export const CalendarProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Global liste over hendelser (i produksjon: hentes fra Peergos)
   const [events, setEvents] = useState<Event[]>([
-    // Demo-hendelse for testing
     {
       id: 'demo-1',
       title: 'Demo: Møte BULANDET',
@@ -60,7 +58,7 @@ export const CalendarProvider: React.FC<{ children: ReactNode }> = ({ children }
     setEvents(prev => prev.filter(e => e.id !== id));
   };
 
-  // Hovedlogikk for filtering
+  // 🔧 KORRIGERT FILTER-LOGIKK
   const getFilteredEvents = (currentUser: string, calendarType: 'all' | 'private' | EventType): Event[] => {
     return events.filter(event => {
       // 1. Samle Kalender ('all'): Vis ALT du har tilgang til
@@ -79,7 +77,9 @@ export const CalendarProvider: React.FC<{ children: ReactNode }> = ({ children }
         return event.createdBy === currentUser;
       }
 
-      // 3. Spesifikk Kalender (BULANDET, HOVET, HOP): Kun hendelser i denne typen + du er invitert
+      // 3. 🔧 SPESIFIKK KALENDER (BULANDET, HOVET, HOP):
+      //   - Hendelsen MÅ være av denne typen
+      //   - DU MÅ VÆRE INVITERT (i attendees)
       if (event.type === calendarType) {
         return event.attendees.includes(currentUser);
       }
