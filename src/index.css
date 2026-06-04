@@ -1,3 +1,20 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Rosa tema */
+:root.pink {
+  --bg-color: #fce7f3;
+  --text-color: #831843;
+}
+
+body {
+  background-color: var(--bg-color, white);
+  color: var(--text-color, black);
+}
+
+/* Sikre at Tailwind-klasser respekterer variablene */
+.bg-white { background-color: var(--bg-color, white) !important; }
+.text-gray-900 { color: var(--text-color, black) !important; }
+.dark .bg-gray-800 { background-color: #1f2937 !important; } /* Dark modus skal fortsatt fungere */
+.dark .text-white { color: #f3f4f6 !important; }
