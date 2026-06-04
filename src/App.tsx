@@ -5,6 +5,7 @@ import { ThemePicker } from './components/ThemePicker';
 import { ChatView } from './components/ChatView';
 import { nb } from './i18n/nb';
 import { en } from './i18n/en';
+import { CalendarView } from './components/CalendarView';
 
 type Tab = 'profile' | 'chat' | 'calendar' | 'split';
 type Theme = 'light' | 'dark' | 'pink' | 'custom';
@@ -267,17 +268,11 @@ function App() {
           </div>
         )}
         
-        {activeTab === 'calendar' && (
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow text-center">
-            <h2 className="text-2xl font-bold mb-4">{t.calendarTitle}</h2>
-            <div className="space-y-2">
-              <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded">{t.bulandet}</div>
-              <div className="p-3 bg-green-100 dark:bg-green-900 rounded">{t.hovet}</div>
-              <div className="p-3 bg-purple-100 dark:bg-purple-900 rounded">{t.hop}</div>
-            </div>
-            <button className="mt-4 bg-blue-600 text-white px-4 py-2 rounded">{t.createCalendar}</button>
-          </div>
-        )}
+       {activeTab === 'calendar' && (
+  <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden" style={{ height: 'calc(100vh - 140px)' }}>
+    <CalendarView currentUser={currentUser} isAdmin={isAdmin} />
+  </div>
+)}
         
         {activeTab === 'split' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
