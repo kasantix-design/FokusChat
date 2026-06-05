@@ -1,4 +1,4 @@
-to import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { peergosService } from './services/peergos-client';
 import { BottomNav } from './components/BottomNav';
 import { ThemePicker } from './components/ThemePicker';
@@ -29,14 +29,15 @@ function App() {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   
-  // 🔧 Lagrer innlogget bruker for Admin-sjekk
+  // Lagrer innlogget bruker for Admin-sjekk
   const [currentUser, setCurrentUser] = useState('');
 
   const t = language === 'nb' ? nb : en;
 
   // Mock database for invitasjonskoder (i produksjon: Peergos API)
-  const [validInviteCodes, setValidInviteCodes] = useState<string[]>(['
-      // 🔧 KORRIGERT TEMA-EFFEKT
+  const [validInviteCodes, setValidInviteCodes] = useState<string[]>(['FOKUS-DEV']);
+
+  // 🔧 KORRIGERT TEMA-EFFEKT
   useEffect(() => {
     const root = document.documentElement;
     
@@ -54,15 +55,13 @@ function App() {
     }
   }, [theme]);
 
-  // --- 🔧 ALLE FUNKSJONER MÅ VÆRE FØR RETURN-STATERMENT ---
-  
   // --- LOGIKK FOR INNLØGNING ---
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccessMsg('');
     try {
-      // 🔧 FIX: Lagre brukernavn FØR vi tømmer feltet
+      // FIX: Lagre brukernavn FØR vi tømmer feltet
       const loggedInUser = username;
       setCurrentUser(loggedInUser);
       
@@ -132,7 +131,7 @@ function App() {
     if (confirm(t.logoutConfirm)) {
       setIsLoggedIn(false);
       setAuthMode('login');
-      setCurrentUser(''); // 🔧 FIX: Nullstill også currentUser
+      setCurrentUser(''); // FIX: Nullstill også currentUser
       setGeneratedCode(null);
     }
   };
@@ -236,22 +235,10 @@ function App() {
   }
 
   // --- INNLOGGET VISNING ---
-  
-  
-    return (
+  return (
     <CalendarProvider>
       <div className="min-h-screen pb-16">
-        {/* Header og andre komponenter vil arve fargene fra body via CSS variabler */}
-        <header className="bg-white dark:bg-gray-800 ...">
-           {/* ... */}
-        </header>
-        {/* ... */}
-      </div>
-    </CalendarProvider>
-
-  );return (
-    <CalendarProvider>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-16">
+        {/* Header */}
         <header className="bg-white dark:bg-gray-800 shadow-sm p-4 sticky top-0 z-40">
           <div className="flex justify-between items-center">
             <h1 className="text-xl font-bold text-blue-600 dark:text-blue-400">{t.appName}</h1>
