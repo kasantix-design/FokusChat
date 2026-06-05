@@ -2,19 +2,46 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Rosa tema */
+/* Basis variabler */
+:root {
+  --bg-color: #f9fafb; /* Gray-50 */
+  --text-color: #111827; /* Gray-900 */
+}
+
+:root.light {
+  --bg-color: #f9fafb;
+  --text-color: #111827;
+}
+
+:root.dark {
+  --bg-color: #111827;
+  --text-color: #f9fafb;
+}
+
 :root.pink {
-  --bg-color: #fce7f3;
-  --text-color: #831843;
+  --bg-color: #fce7f3; /* Pink-100 */
+  --text-color: #831843; /* Pink-900 */
+}
+
+/* 🎨 CUSTOM TEMA - Bruker brukerens valgte farge */
+:root.custom {
+  --bg-color: var(--custom-bg); /* Settes dynamisk fra JS */
+  --text-color: var(--custom-text); /* Settes dynamisk fra JS */
 }
 
 body {
-  background-color: var(--bg-color, white);
-  color: var(--text-color, black);
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Sikre at Tailwind-klasser respekterer variablene */
-.bg-white { background-color: var(--bg-color, white) !important; }
-.text-gray-900 { color: var(--text-color, black) !important; }
-.dark .bg-gray-800 { background-color: #1f2937 !important; } /* Dark modus skal fortsatt fungere */
-.dark .text-white { color: #f3f4f6 !important; }
+/* Sørg for at Tailwind-klasser respekterer variablene */
+.bg-gray-50, .bg-white, .bg-pink-100 { 
+  background-color: var(--bg-color); 
+}
+.bg-gray-900, .bg-gray-800 { 
+  background-color: var(--bg-color); 
+}
+.text-gray-900, .text-white, .text-gray-700, .text-pink-900 { 
+  color: var(--text-color); 
+}
