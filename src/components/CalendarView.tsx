@@ -1,303 +1,366 @@
-import React, { useState, useMemo } from 'react';
-import { useCalendar, EventType } from '../context/CalendarContext';
+import React, { useState, useEffect, useRef } from 'react';
+import { chatService, Conversation, Message } from '../services/chat-service';
 
-type ViewType = 'all' | 'private' | EventType;
-
-interface CalendarViewProps {
+interface ChatViewProps {
   currentUser: string;
-  isAdmin: boolean;
 }
 
-export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, isAdmin }) => {
-  const { events, addEvent, updateEvent, deleteEvent, getFilteredEvents } = useCalendar();
+export const ChatView: React.FC<ChatViewProps> = ({ currentUser }) => {
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const [newMessage, setNewMessage] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showCreateMenu, setShowCreateMenu] = useState<'none' | 'chat' | 'event'>('none'); // For den store + knappen
+  const [newChatName, setNewChatName] = useState('');
+  const [newChatIsGroup, setNewChatIsGroup] = useState(false);
+  const [attachmentType, setAttachmentType] = useState<'none' | 'image' | 'video' | 'voice' | 'file'>('none');
+  const [isTyping, setIsTyping] = useState(false);
   
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedView, setSelectedView] = useState<ViewType>('all');
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [showModal, setShowModal] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<any>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const displayedEvents = useMemo(() => {
-    return getFilteredEvents(currentUser, selectedView);
-  }, [events, currentUser, selectedView, getFilteredEvents]);
+  // Hent samtaler ved oppstart og filtrer basert på sikkerhet
+  useEffect(() => {
+    const allConversations = chatService.getConversations();
+    
+    // 🔧 SIKKERHET: Vis kun samtaler hvor DU er deltaker
+    const myConversations = allConversations.filter(conv => 
+      conv.participants.includes(currentUser)
+    );
 
-  // 🔧 KORRIGERT FARGER (med label for hver)
-  const calendarColors = {
-    all: { bg: 'bg-indigo-100 dark:bg-indigo-900', border: 'border-indigo-300', text: 'text-indigo-900 dark:text-indigo-100', label: 'Samle Kalender' },
-    private: { bg: 'bg-gray-100 dark:bg-gray-700', border: 'border-gray-300', text: 'text-gray-800 dark:text-gray-200', label: 'Privat' },
-    bulandet: { bg: 'bg-blue-100 dark:bg-blue-900', border: 'border-blue-300', text: 'text-blue-900 dark:text-blue-100', label: 'BULANDET' },
-    hovet: { bg: 'bg-green-100 dark:bg-green-900', border: 'border-green-300', text: 'text-green-900 dark:text-green-100', label: 'HOVET' },
-    hop: { bg: 'bg-purple-100 dark:bg-purple-900', border: 'border-purple-300', text: 'text-purple-900 dark:text-purple-100', label: 'HOP' },
-    custom: { bg: 'bg-yellow-100 dark:bg-yellow-900', border: 'border-yellow-300', text: 'text-yellow-900 dark:text-yellow-100', label: 'Egen' },
-  };
+    setConversations(myConversations);
 
-  const daysInMonth = useMemo(() => {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const days = [];
-
-    for (let i = 0; i < firstDay.getDay(); i++) days.push(null);
-    for (let i = 1; i <= lastDay.getDate(); i++) days.push(new Date(year, month, i));
-
-    return days;
-  }, [currentDate]);
-
-  // 🔧 KORRIGERT: Sjekk om dato faller INNENFOR hendelsesperiode (flere dager)
-  const getEventsForDate = (date: Date) => {
-    const dateStr = date.toDateString();
-    return displayedEvents.filter(event => {
-      const start = new Date(event.startDate);
-      const end = new Date(event.endDate);
-      // Sjekk om dato er mellom start og end (inklusive)
-      return date >= start && date <= end;
+    const unsubscribe = chatService.subscribe((data) => {
+      if (data.type === 'UPDATE_CONVERSATIONS') {
+        const updatedAll = data.conversations;
+        const updatedMy = updatedAll.filter(conv => 
+          conv.participants.includes(currentUser)
+        );
+        setConversations(updatedMy);
+      }
     });
-  };
 
-  const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
-  const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
-  const goToToday = () => setCurrentDate(new Date());
+    return () => unsubscribe();
+  }, [currentUser]);
 
-  const handleAddEvent = () => {
-    setEditingEvent(null);
-    setShowModal(true);
-  };
-
-  const handleEditEvent = (event: any) => {
-    setEditingEvent(event);
-    setShowModal(true);
-  };
-
-  const handleDeleteEvent = (eventId: string) => {
-    const event = displayedEvents.find((e: any) => e.id === eventId);
-    if (!event) return;
-
-    if (event.createdBy !== currentUser && !isAdmin) {
-      alert('Du har ikke tillatelse til å slette denne hendelsen.');
-      return;
+  // Skrive-indikator logikk
+  useEffect(() => {
+    if (newMessage.length > 0 && !isTyping) {
+      setIsTyping(true);
+      // I en ekte app sender vi "typing" status til serveren her
+    } else if (newMessage.length === 0 && isTyping) {
+      setIsTyping(false);
     }
 
-    if (confirm('Er du sikker på at du vil slette denne hendelsen?')) {
-      deleteEvent(eventId);
-      setShowModal(false);
+    // Automatisk reset hvis brukeren stopper å skrive (simulert)
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      if (newMessage.length === 0) setIsTyping(false);
+    }, 2000);
+  }, [newMessage]);
+
+  // Scroll til bunn
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [selectedConversation?.messages]);
+
+  // Sortering
+  const sortedConversations = [...conversations].sort((a, b) => {
+    if (a.isPinned && !b.isPinned) return -1;
+    if (!a.isPinned && b.isPinned) return 1;
+    return (b.lastMessage?.timestamp || 0) - (a.lastMessage?.timestamp || 0);
+  });
+
+  // Søkefilter
+  const filteredConversations = sortedConversations.filter(c =>
+    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    c.messages.some(m => m.text.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  // Send melding
+  const sendMessage = () => {
+    if (!newMessage.trim() && attachmentType === 'none') return;
+    if (!selectedConversation) return;
+
+    let fileData: string | undefined;
+    let fileName: string | undefined;
+    
+    if (attachmentType !== 'none') {
+      fileData = `simulated_${attachmentType}_data`;
+      fileName = `test.${attachmentType === 'image' ? 'jpg' : attachmentType === 'video' ? 'mp4' : attachmentType === 'voice' ? 'mp3' : 'pdf'}`;
     }
+
+    // Status start: sending -> sent -> read (rosa)
+    const tempId = `temp-${Date.now()}`;
+    
+    chatService.sendMessage(
+      selectedConversation.id,
+      currentUser,
+      newMessage,
+      attachmentType !== 'none' ? attachmentType : 'text',
+      fileData,
+      fileName
+    );
+
+    // Simuler lesing etter 1 sekund (i sanntid med Peergos vil dette komme fra server)
+    setTimeout(() => {
+       // Her ville vi oppdatert statusen til 'read' via API
+       console.log("Melding lest!"); 
+    }, 1000);
+
+    setNewMessage('');
+    setAttachmentType('none');
+    setShowCreateMenu('none');
   };
 
-  const handleSaveEvent = (eventData: any) => {
-    if (editingEvent) {
-      updateEvent(editingEvent.id, eventData);
-    } else {
-      addEvent({
-        ...eventData,
-        createdBy: currentUser,
-        attendees: eventData.attendees || [currentUser],
-      });
-    }
-    setShowModal(false);
+  // Opprett ny samtale
+  const handleCreateChat = () => {
+    if (!newChatName.trim()) return;
+    const newConv = chatService.createConversation(
+      newChatName,
+      [currentUser], // Legger kun deg selv inn først, andre må inviteres senere
+      newChatIsGroup
+    );
+    setSelectedConversation(newConv);
+    setShowCreateMenu('none');
+    setNewChatName('');
+    setNewChatIsGroup(false);
   };
 
-  const formatDate = (date: Date) => date.toLocaleDateString('nb-NO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const formatTime = (timestamp: number) => {
+    return new Date(timestamp).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' });
+  };
 
-  return (
-    <div className="h-full flex flex-col">
-      <div className="p-4 bg-white dark:bg-gray-800 border-b dark:border-gray-700 flex flex-col gap-3">
-        <div className="flex justify-between items-center">
-          <div>
-            <h2 className="text-2xl font-bold">📅 Kalender</h2>
-            <p className="text-sm text-gray-500">{formatDate(currentDate)}</p>
+  // ===== VISNING: LISTE OVER CHATTER =====
+  if (!selectedConversation) {
+    return (
+      <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900">
+        {/* Header */}
+        <div className="p-4 bg-white dark:bg-gray-800 border-b dark:border-gray-700 shadow-sm">
+          <div className="flex justify-between items-center mb-3">
+            <h2 className="text-2xl font-bold text-blue-600 dark:text-blue-400">💬 Chat</h2>
+            {/* Den gamle knappen er fjernet! */}
           </div>
-          <div className="flex gap-2">
-            <button onClick={goToToday} className="px-3 py-1 text-sm border rounded hover:bg-gray-100 dark:hover:bg-gray-700">I dag</button>
-            <button onClick={prevMonth} className="px-3 py-1 text-sm border rounded hover:bg-gray-100 dark:hover:bg-gray-700">←</button>
-            <button onClick={nextMonth} className="px-3 py-1 text-sm border rounded hover:bg-gray-100 dark:hover:bg-gray-700">→</button>
-            <button onClick={handleAddEvent} className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm font-bold">+ Hendelse</button>
-          </div>
+          
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Søk i chatter..."
+            className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+          />
         </div>
 
-        {/* 🔧 KORRIGERT: Kalender-valgmeny med riktige farger */}
-        <div className="flex flex-wrap gap-2">
-          {(['all', 'private', 'bulandet', 'hovet', 'hop', 'custom'] as ViewType[]).map((key) => (
-            <button
-              key={key}
-              onClick={() => setSelectedView(key)}
-              className={`px-3 py-1 text-sm rounded-full border transition-all ${
-                selectedView === key
-                  ? `${calendarColors[key].bg} ${calendarColors[key].text} ${calendarColors[key].border} font-bold ring-2 ring-offset-1 ring-blue-500`
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600'
-              }`}
-            >
-              {calendarColors[key].label}
-            </button>
-          ))}
+        {/* Create Menu (Popper opp når man trykker +) */}
+        {showCreateMenu === 'chat' && (
+          <div className="p-4 bg-blue-50 dark:bg-blue-900 border-b dark:border-gray-700 animate-fade-in">
+            <h3 className="font-bold mb-2 text-blue-800 dark:text-blue-200">Ny samtale</h3>
+            <input
+              type="text"
+              value={newChatName}
+              onChange={(e) => setNewChatName(e.target.value)}
+              placeholder="Navn på samtale/gruppe..."
+              className="w-full px-3 py-2 border rounded-lg mb-2 text-sm dark:bg-gray-800 dark:text-white"
+            />
+            <label className="flex items-center gap-2 mb-3 text-sm text-gray-700 dark:text-gray-300">
+              <input
+                type="checkbox"
+                checked={newChatIsGroup}
+                onChange={(e) => setNewChatIsGroup(e.target.checked)}
+              />
+              Gruppechat
+            </label>
+            <div className="flex gap-2">
+              <button onClick={() => setShowCreateMenu('none')} className="flex-1 py-2 border rounded text-gray-600">Avbryt</button>
+              <button onClick={handleCreateChat} className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-bold">Opprett</button>
+            </div>
+          </div>
+        )}
+
+        {/* Samtaleliste */}
+        <div className="flex-1 overflow-y-auto pb-20">
+          {filteredConversations.length === 0 ? (
+            <div className="text-center text-gray-500 py-12 mt-10">
+              <p className="text-4xl mb-2">💬</p>
+              <p>Ingen chatter ennå</p>
+              <p className="text-sm mt-1">Trykk på <span className="bg-blue-600 text-white rounded-full w-6 h-6 inline-flex items-center justify-center mx-1">+</span> nede for å starte</p>
+            </div>
+          ) : (
+            filteredConversations.map(conv => (
+              <div
+                key={conv.id}
+                onClick={() => setSelectedConversation(conv)}
+                className="flex items-center gap-3 p-4 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer border-b dark:border-gray-700 transition-colors"
+              >
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg ${
+                  conv.isGroup ? 'bg-blue-500' : 'bg-green-500'
+                }`}>
+                  {conv.isGroup ? '👥' : conv.name.charAt(0).toUpperCase()}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold truncate text-gray-900 dark:text-gray-100">
+                      {conv.isPinned && <span className="mr-1">📌</span>}
+                      {conv.name}
+                    </span>
+                    <span className="text-xs text-gray-500 ml-2">
+                      {conv.lastMessage ? formatTime(conv.lastMessage.timestamp) : ''}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-gray-500 truncate">
+                      {conv.lastMessage?.sender === currentUser && 'Du: '}
+                      {conv.lastMessage?.text || 'Ingen meldinger'}
+                    </p>
+                    {/* Status haker */}
+                    {conv.lastMessage?.sender === currentUser && (
+                      <span className={`ml-2 text-sm ${
+                        conv.lastMessage.status === 'sent' ? 'text-green-500' : 'text-pink-500'
+                      }`}>
+                        {conv.lastMessage.status === 'sent' ? '✓' : '✓✓'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* 🔧 STOR + KNAPP (Floating Action Button) */}
+        <div className="fixed bottom-20 right-6 z-50">
+          <button
+            onClick={() => setShowCreateMenu(prev => prev === 'chat' ? 'none' : 'chat')}
+            className="w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center text-2xl font-bold transform transition-transform hover:scale-110"
+          >
+            +
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ===== VISNING: ENKEL SAMTALE =====
+  return (
+    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900">
+      {/* Chat Header */}
+      <div className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 border-b dark:border-gray-700 shadow-sm">
+        <button
+          onClick={() => setSelectedConversation(null)}
+          className="text-blue-600 hover:text-blue-800 text-xl"
+        >
+          ←
+        </button>
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
+          selectedConversation.isGroup ? 'bg-blue-500' : 'bg-green-500'
+        }`}>
+          {selectedConversation.isGroup ? '👥' : selectedConversation.name.charAt(0)}
+        </div>
+        <div className="flex-1">
+          <h3 className="font-bold text-gray-900 dark:text-gray-100">{selectedConversation.name}</h3>
+          <p className="text-xs text-gray-500">
+            {selectedConversation.isGroup 
+              ? `${selectedConversation.participants.length} deltakere` 
+              : 'Online'}
+            {isTyping && <span className="ml-2 text-pink-500 font-semibold italic">skriver...</span>}
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-1">
+          <button onClick={() => chatService.togglePin(selectedConversation.id)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-sm">
+            📌
+          </button>
+          <button onClick={() => { if(confirm('Slette?')) { chatService.deleteConversation(selectedConversation.id); setSelectedConversation(null); }}} className="p-2 hover:bg-red-100 text-red-500 rounded-lg text-sm">
+            🗑️
+          </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4">
-        <div className="grid grid-cols-7 gap-1 mb-2 text-center text-sm font-semibold text-gray-500">
-          <div>Mån</div><div>Tirs</div><div>Ons</div><div>Tors</div><div>Fre</div><div>Lør</div><div>Søn</div>
-        </div>
-
-        <div className="grid grid-cols-7 gap-1">
-          {daysInMonth.map((day, index) => {
-            if (!day) return <div key={index} className="h-24 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"></div>;
-            
-            const dayEvents = getEventsForDate(day);
-            const isToday = day.toDateString() === new Date().toDateString();
-
+      {/* Meldinger */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {selectedConversation.messages.length === 0 ? (
+          <div className="text-center text-gray-400 py-12">
+            <p className="text-4xl mb-2">✉️</p>
+            <p>Start samtalen!</p>
+          </div>
+        ) : (
+          selectedConversation.messages.map(msg => {
+            const isMine = msg.sender === currentUser;
             return (
-              <div
-                key={index}
-                onClick={() => { setSelectedDate(day); handleAddEvent(); }}
-                className={`h-24 border border-gray-200 dark:border-gray-700 p-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors relative ${isToday ? 'bg-blue-50 dark:bg-blue-900' : 'bg-white dark:bg-gray-800'}`}
-              >
-                <span className={`text-sm font-bold ${isToday ? 'text-blue-600' : 'text-gray-700 dark:text-gray-300'}`}>
-                  {day.getDate()}
-                </span>
-                <div className="mt-1 space-y-1">
-                  {dayEvents.slice(0, 3).map((evt: any) => (
-                    <div
-                      key={evt.id}
-                      onClick={(e) => { e.stopPropagation(); handleEditEvent(evt); }}
-                      className={`text-xs p-1 rounded truncate cursor-pointer ${calendarColors[evt.type].bg} ${calendarColors[evt.type].text} border ${calendarColors[evt.type].border}`}
-                      title={`${evt.title} (${calendarColors[evt.type].label})`}
-                    >
-                      {evt.title}
-                    </div>
-                  ))}
-                  {dayEvents.length > 3 && (
-                    <div className="text-xs text-gray-500">+{dayEvents.length - 3} flere</div>
+              <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[75%] px-4 py-2 rounded-2xl shadow-sm ${
+                  isMine 
+                    ? 'bg-blue-600 text-white rounded-br-none' 
+                    : 'bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-bl-none'
+                }`}>
+                  {selectedConversation.isGroup && !isMine && (
+                    <p className="text-xs font-semibold text-blue-300 mb-1">{msg.sender}</p>
                   )}
+                  
+                  {msg.type === 'text' && <p>{msg.text}</p>}
+                  {msg.type === 'image' && <div className="bg-gray-200 dark:bg-gray-700 rounded p-2 text-center"><p className="text-2xl">🖼️</p><p className="text-xs mt-1 opacity-70">Bilde</p></div>}
+                  {msg.type === 'video' && <div className="bg-gray-200 dark:bg-gray-700 rounded p-2 text-center"><p className="text-2xl">🎬</p><p className="text-xs mt-1 opacity-70">Video</p></div>}
+                  {msg.type === 'voice' && <div className="bg-gray-200 dark:bg-gray-700 rounded p-2 text-center"><p className="text-2xl">🎤</p><p className="text-xs mt-1 opacity-70">Voice</p></div>}
+                  {msg.type === 'file' && <div className="bg-gray-200 dark:bg-gray-700 rounded p-2 text-center"><p className="text-2xl">📄</p><p className="text-xs mt-1 opacity-70">{msg.fileName}</p></div>}
+                  
+                  <div className="flex justify-end items-center gap-1 mt-1">
+                    <p className={`text-xs ${isMine ? 'text-blue-100' : 'text-gray-400'}`}>{formatTime(msg.timestamp)}</p>
+                    {isMine && (
+                      <span className={`text-xs ${
+                        msg.status === 'sent' ? 'text-blue-200' : 'text-pink-300 font-bold'
+                      }`}>
+                        {msg.status === 'sent' ? '✓' : '✓✓'}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             );
-          })}
-        </div>
+          })
+        )}
+        <div ref={messagesEndRef} />
       </div>
 
-      {showModal && (
-        <EventModal
-          event={editingEvent}
-          onClose={() => setShowModal(false)}
-          onSave={handleSaveEvent}
-          onDelete={handleDeleteEvent}
-          currentUser={currentUser}
-          isAdmin={isAdmin}
-        />
-      )}
-    </div>
-  );
-};
-
-// EventModal (samme som før)
-interface EventModalProps {
-  event: any;
-  onClose: () => void;
-  onSave: (data: any) => void;
-  onDelete: (id: string) => void;
-  currentUser: string;
-  isAdmin: boolean;
-}
-
-const EventModal: React.FC<EventModalProps> = ({ event, onClose, onSave, onDelete, currentUser, isAdmin }) => {
-  const [title, setTitle] = useState(event?.title || '');
-  const [description, setDescription] = useState(event?.description || '');
-  const [startDate, setStartDate] = useState(event?.startDate ? new Date(event.startDate).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16));
-  const [endDate, setEndDate] = useState(event?.endDate ? new Date(event.endDate).toISOString().slice(0, 16) : new Date(new Date().setHours(new Date().getHours() + 1)).toISOString().slice(0, 16));
-  const [type, setType] = useState<EventType>(event?.type || 'private');
-  const [repeat, setRepeat] = useState(event?.repeat || 'none');
-  const [reminder, setReminder] = useState(event?.reminderMinutes || 15);
-  const [attendees, setAttendees] = useState(event?.attendees?.join(', ') || currentUser);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave({
-      title,
-      description,
-      startDate: new Date(startDate),
-      endDate: new Date(endDate),
-      type,
-      repeat,
-      reminderMinutes: reminder,
-      attendees: attendees.split(',').map((a: string) => a.trim()).filter(Boolean),
-    });
-  };
-
-  const canDelete = event ? (event.createdBy === currentUser || isAdmin) : true;
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="p-4 border-b dark:border-gray-700 flex justify-between items-center">
-          <h3 className="text-xl font-bold">{event ? 'Rediger hendelse' : 'Ny hendelse'}</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+      {/* Vedlegg valg (hvis aktiv) */}
+      {attachmentType !== 'none' && (
+        <div className="px-4 py-2 bg-yellow-50 dark:bg-yellow-900 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <span className="text-sm text-gray-800 dark:text-gray-200">
+            {attachmentType === 'image' && '🖼️ Bilde valgt'}
+            {attachmentType === 'video' && '🎬 Video valgt'}
+            {attachmentType === 'voice' && '🎤 Voice-opptak'}
+            {attachmentType === 'file' && '📄 Fil valgt'}
+          </span>
+          <button onClick={() => setAttachmentType('none')} className="text-red-500 text-sm font-bold">Avbryt</button>
         </div>
+      )}
 
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Tittel</label>
-            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Beskrivelse</label>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" rows={3} />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Starttid</label>
-              <input type="datetime-local" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Sluttid</label>
-              <input type="datetime-local" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Kalender</label>
-              <select value={type} onChange={(e) => setType(e.target.value as EventType)} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:text-white">
-                <option value="private">Privat</option>
-                <option value="bulandet">BULANDET</option>
-                <option value="hovet">HOVET</option>
-                <option value="hop">HOP</option>
-                <option value="custom">Egen</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Gjentakelse</label>
-              <select value={repeat} onChange={(e) => setRepeat(e.target.value as any)} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:text-white">
-                <option value="none">Ingen</option>
-                <option value="daily">Daglig</option>
-                <option value="weekly">Ukentlig</option>
-                <option value="monthly">Månedlig</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Påminnelse (minutter før)</label>
-            <input type="number" value={reminder} onChange={(e) => setReminder(Number(e.target.value))} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" min="0" />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Deltakere (kommaseparert)</label>
-            <input type="text" value={attendees} onChange={(e) => setAttendees(e.target.value)} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" placeholder="brukernavn1, brukernavn2" />
-            <p className="text-xs text-gray-500 mt-1">Brukernavn som skal inviteres.</p>
-          </div>
-
-          <div className="flex justify-between pt-4 border-t dark:border-gray-700">
-            {canDelete && event && (
-              <button type="button" onClick={() => onDelete(event.id)} className="text-red-500 hover:text-red-700 font-bold">Slett</button>
-            )}
-            <div className="flex gap-2 ml-auto">
-              <button type="button" onClick={onClose} className="px-4 py-2 border rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">Avbryt</button>
-              <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold">Lagre</button>
-            </div>
-          </div>
-        </form>
+      {/* Send felt */}
+      <div className="p-3 bg-white dark:bg-gray-800 border-t dark:border-gray-700">
+        <div className="flex gap-2 mb-2">
+          <button onClick={() => setAttachmentType('image')} className="text-2xl hover:scale-110 transition-transform">🖼️</button>
+          <button onClick={() => setAttachmentType('video')} className="text-2xl hover:scale-110 transition-transform">🎬</button>
+          <button onClick={() => setAttachmentType('voice')} className="text-2xl hover:scale-110 transition-transform">🎤</button>
+          <button onClick={() => setAttachmentType('file')} className="text-2xl hover:scale-110 transition-transform">📄</button>
+        </div>
+        
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+            placeholder="Skriv en melding..."
+            className="flex-1 px-4 py-2 border rounded-full dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+          />
+          <button
+            onClick={sendMessage}
+            disabled={!newMessage.trim() && attachmentType === 'none'}
+            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-6 py-2 rounded-full font-bold transition-colors"
+          >
+            ➤
+          </button>
+        </div>
       </div>
     </div>
   );
