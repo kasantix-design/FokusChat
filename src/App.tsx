@@ -11,6 +11,7 @@ type Tab = 'profile' | 'chat' | 'calendar' | 'split';
 type Theme = 'light' | 'dark' | 'pink' | 'custom';
 type Language = 'nb' | 'en';
 type AuthMode = 'login' | 'register' | 'reset';
+type CreateOption = 'none' | 'chat' | 'event'; // Menyvalg for + knappen
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -21,7 +22,7 @@ function App() {
   // 🔧 LASTER Custom Color fra localStorage ved oppstart
   const [customColor, setCustomColor] = useState<string>(() => {
     const saved = localStorage.getItem('fokus_custom_color');
-    return saved || '#3b82f6'; // Default blå
+    return saved || '#3b82f6';
   });
   
   const [language, setLanguage] = useState<Language>('nb');
@@ -38,37 +39,32 @@ function App() {
   // Lagrer innlogget bruker for Admin-sjekk
   const [currentUser, setCurrentUser] = useState('');
 
+  // 🔧 NYTT STATE FOR DEN STORE + KNAPPEN
+  const [createOption, setCreateOption] = useState<CreateOption>('none');
+
   const t = language === 'nb' ? nb : en;
 
-  // Mock database for invitasjonskoder (i produksjon: Peergos API)
+  // Mock database for invitasjonskoder
   const [validInviteCodes, setValidInviteCodes] = useState<string[]>(['FOKUS-DEV']);
 
-  // 🔧 KORRIGERT TEMA-EFFEKT med Custom Farge
+  // 🔧 TEMA-EFFEKT
   useEffect(() => {
     const root = document.documentElement;
-    
-    // 1. Fjern ALLE tema-klasser først
     root.classList.remove('light', 'dark', 'pink', 'custom');
     
-    // 2. Slett custom-varibler hvis ikke i use
     if (theme !== 'custom') {
       root.style.removeProperty('--custom-bg');
       root.style.removeProperty('--custom-text');
     }
     
-    // 3. Sett riktig klasse basert på state
     if (theme === 'dark') {
       root.classList.add('dark');
     } else if (theme === 'pink') {
       root.classList.add('pink');
     } else if (theme === 'custom') {
-      // 🔧 CUSTOM TEMA - Bruker brukerens valgte farge
       root.classList.add('custom');
-      
-      // Set farge som CSS variabel
       root.style.setProperty('--custom-bg', customColor);
       
-      // 🎨 Beregn om tekst skal være lys eller mørk basert på farge (luminans-beregning)
       const hex = customColor.replace('#', '');
       const r = parseInt(hex.substr(0, 2), 16);
       const g = parseInt(hex.substr(2, 2), 16);
@@ -81,23 +77,20 @@ function App() {
         root.style.setProperty('--custom-text', '#111827');
       }
     } else {
-      // Default light
       root.classList.add('light');
     }
   }, [theme, customColor]);
 
-  // 🔧 HÅNDTER CUSTOM COLOR ENDRING - Lagre til localStorage
   const handleCustomColorChange = (color: string) => {
     setCustomColor(color);
     localStorage.setItem('fokus_custom_color', color);
   };
 
-  // 🔧 HÅNDTER TEMA ENDRING
   const handleThemeChange = (newTheme: Theme) => {
     setTheme(newTheme);
   };
 
-  // --- LOGIKK FOR INNLØGNING ---
+  // --- FUNKSJONER ---
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -113,17 +106,14 @@ function App() {
     }
   };
 
-  // --- LOGIKK FOR REGISTRERING ---
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccessMsg('');
-    
     if (!validInviteCodes.includes(inviteCodeInput)) {
-      setError('Ugyldig invitasjonskode. Sjekk at du har skrevet den riktig.');
+      setError('Ugyldig invitasjonskode.');
       return;
     }
-
     try {
       console.log('Registrerer:', username, email, inviteCodeInput);
       setSuccessMsg('Bruker opprettet! Du kan nå logge inn.');
@@ -137,7 +127,6 @@ function App() {
     }
   };
 
-  // --- LOGIKK FOR GLEMT PASSORD ---
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -151,7 +140,6 @@ function App() {
     setEmail('');
   };
 
-  // --- ADMIN: GENERER NY KODE ---
   const generateInviteCode = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let code = 'INV-';
@@ -169,6 +157,29 @@ function App() {
       setAuthMode('login');
       setCurrentUser('');
       setGeneratedCode(null);
+    }
+  };
+
+  // Helper for å håndtere valg fra + knappen
+  const handleCreateSelection = (option: CreateOption) => {
+    if (option === 'none') {
+      setCreateOption('none');
+      return;
+    }
+
+    if (option === 'chat') {
+      // Bytt til chat fanen og sett opp menyen der (vi sender event via props hvis nødvendig, 
+      // men enklere er å bare bytte fanen og la ChatView vise sin egen "Ny Chat" meny)
+      setActiveTab('chat');
+      // Vi kan bruke en global ref eller event, men foreløpig:
+      // La oss si at når man trykker "Ny Chat", så åpnes chat-fanen.
+      // For enkelhets skyld, la oss la user velge ny chat inne i chat-fanen etterpå.
+      // MEN: For å gjøre det mer dynamisk, kan vi sende en prop ned til Child-komponentene.
+      // Foreløpig: Bare bytt tab og la brukeren se "Ny Chat" menyen der.
+      setCreateOption('none'); 
+    } else if (option === 'event') {
+      setActiveTab('calendar');
+      setCreateOption('none');
     }
   };
 
@@ -228,7 +239,8 @@ function App() {
   // --- INNLOGGET VISNING ---
   return (
     <CalendarProvider>
-      <div className="min-h-screen pb-16 transition-colors duration-300">
+      <div className="min-h-screen pb-24 transition-colors duration-300"> {/* pb-24 gir plass til FAB */}
+        
         <header className="bg-white dark:bg-gray-800 shadow-sm p-4 sticky top-0 z-40">
           <div className="flex justify-between items-center">
             <h1 className="text-xl font-bold text-blue-600 dark:text-blue-400">{t.appName}</h1>
@@ -242,7 +254,7 @@ function App() {
           </div>
         </header>
 
-        <main className="p-4">
+        <main className="p-4 relative">
           {activeTab === 'profile' && (
             <div className="space-y-6">
               <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
@@ -278,31 +290,97 @@ function App() {
           )}
 
           {activeTab === 'chat' && (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden" style={{ height: 'calc(100vh - 140px)' }}>
-              <ChatView currentUser={currentUser} />
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden h-[calc(100vh-180px)]">
+              <ChatView currentUser={currentUser} onCreateNew={() => setCreateOption('chat')} />
             </div>
           )}
           
           {activeTab === 'calendar' && (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden" style={{ height: 'calc(100vh - 140px)' }}>
-              <CalendarView currentUser={currentUser} isAdmin={isAdmin} />
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden h-[calc(100vh-180px)]">
+              <CalendarView currentUser={currentUser} isAdmin={isAdmin} onCreateNew={() => setCreateOption('event')} />
             </div>
           )}
           
           {activeTab === 'split' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-                <h3 className="font-bold mb-2">{t.chatTitle}</h3>
-                <p className="text-sm text-gray-500">{t.noChats}</p>
+              <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow h-[calc(100vh-250px)] overflow-y-auto">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="font-bold">{t.chatTitle}</h3>
+                  <button onClick={() => setCreateOption('chat')} className="text-blue-600 text-sm font-bold">+ Ny Chat</button>
+                </div>
+                <p className="text-sm text-gray-500">Trykk + for å starte en ny samtale.</p>
+                {/* Her kunne vi listet opp chatter kort */}
               </div>
-              <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-                <h3 className="font-bold mb-2">{t.calendarTitle}</h3>
-                <p className="text-sm text-gray-500">{t.busy}</p>
+              <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow h-[calc(100vh-250px)] overflow-y-auto">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="font-bold">{t.calendarTitle}</h3>
+                  <button onClick={() => setCreateOption('event')} className="text-blue-600 text-sm font-bold">+ Ny Hendelse</button>
+                </div>
+                <p className="text-sm text-gray-500">Trykk + for å legge til en hendelse.</p>
+                 {/* Her kunne vi listet opp kommende hendelser kort */}
               </div>
             </div>
           )}
         </main>
+
         <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+
+        {/* 🔧 DEN STORE + KNAPPEN (FLOATING ACTION BUTTON) - SYN PÅ ALLE SIDENE */}
+        <div className="fixed bottom-24 right-6 z-50 flex flex-col items-end gap-2">
+          
+          {/* Meny-valg som dukker opp når man trykker + */}
+          {createOption === 'none' && (
+             <>
+               <button
+                onClick={() => setCreateOption('chat')}
+                className="bg-white dark:bg-gray-800 text-blue-600 shadow-lg px-4 py-2 rounded-full font-bold text-sm transform translate-x-4 opacity-0 animate-slide-in transition-all"
+                style={{ animationDelay: '0.1s' }}
+              >
+                💬 Ny Chat
+              </button>
+              <button
+                onClick={() => setCreateOption('event')}
+                className="bg-white dark:bg-gray-800 text-purple-600 shadow-lg px-4 py-2 rounded-full font-bold text-sm transform translate-x-4 opacity-0 animate-slide-in transition-all"
+                style={{ animationDelay: '0.05s' }}
+              >
+                📅 Ny Hendelse
+              </button>
+             </>
+          )}
+
+          {/* Hovedknapp (+) */}
+          <button
+            onClick={() => setCreateOption(createOption === 'none' ? 'show' : 'none')}
+            className="w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-xl flex items-center justify-center text-3xl font-bold transform transition-transform hover:scale-110 active:scale-95"
+          >
+            {createOption === 'none' ? '+' : '✕'}
+          </button>
+        </div>
+
+        {/* Hvis man velger en handling, utfør den og lukk menyen */}
+        {createOption === 'chat' && (
+           <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+             <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md animate-scale-up">
+               <h3 className="text-xl font-bold mb-4">Nye Samtale</h3>
+               {/* Dette er en forenklet versjon. I sanntid bør vi bruke ChatViews interne state. */}
+               <p className="text-sm text-gray-500 mb-4">Gå til Chat-fanen for å opprette en ny samtale detaljert.</p>
+               <button onClick={() => { setActiveTab('chat'); setCreateOption('none'); }} className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold">Gå til Chat</button>
+               <button onClick={() => setCreateOption('none')} className="w-full mt-2 bg-gray-200 text-gray-800 py-2 rounded-lg font-bold">Avbryt</button>
+             </div>
+           </div>
+        )}
+
+        {createOption === 'event' && (
+           <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+             <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md animate-scale-up">
+               <h3 className="text-xl font-bold mb-4">Ny Hendelse</h3>
+               <p className="text-sm text-gray-500 mb-4">Gå til Kalender-fanen for å legge til en ny hendelse.</p>
+               <button onClick={() => { setActiveTab('calendar'); setCreateOption('none'); }} className="w-full bg-purple-600 text-white py-2 rounded-lg font-bold">Gå til Kalender</button>
+               <button onClick={() => setCreateOption('none')} className="w-full mt-2 bg-gray-200 text-gray-800 py-2 rounded-lg font-bold">Avbryt</button>
+             </div>
+           </div>
+        )}
+
       </div>
     </CalendarProvider>
   );
